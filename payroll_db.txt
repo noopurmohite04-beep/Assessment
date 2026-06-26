@@ -1,0 +1,155 @@
+create table employees (emp_id int primary key, emp_name varchar(60), designation varchar(50), salary decimal(10,2) CHECK (salary > 0), hire_date date);
+
+create table attendance(att_id int primary key,emp_id int,present_days int check(present_days between 0 and 31),att_month int check(att_month between 1 and 12),
+att_year int check(att_year>2000),foreign key(emp_id) references employees(emp_id));
+
+create table payroll(payroll_id int primary key,emp_id int,base_salary decimal(10,2),bonus decimal(10,2) default 0,deductions decimal(10,2) default 0,
+net_salary decimal(10,2),pay_month int,pay_year int,foreign key(emp_id) references employees(emp_id));
+
+--insert
+insert all
+into employees values(1,'Harry','Manager',50000,'01-09-2021')
+into employees values(2,'john','Accountant',40000,'02-10-2020')
+into employees values(3,'charles','Developer',45000,'03-05-2026')
+into employees values(4,'tony','HR',38000,'04-12-2024')
+into employees values(5,'jury','Analyst',42000,'05-06-2025')
+into employees values(6,'tom','Developer',47000,'06-03-2023')
+into employees values(7,'louis','Tester',35000,'07-12-2023')
+into employees values(8,'peter','Support',30000,'08-12-2022')
+select * from dual
+select * from employees
+
+insert all
+into attendance values(1,1,27,7,2025)
+into attendance values(2,2,18,7,2025)
+into attendance values(3,3,29,7,2025)
+into attendance values(4,4,14,7,2025)
+into attendance values(5,5,22,7,2025)
+into attendance values(6,6,30,7,2025)
+into attendance values(7,7,19,7,2025)
+into attendance values(8,8,26,7,2025)
+select * from dual
+select * from attendance
+
+insert all
+into payroll values(1,1,50000,1000,0,51000,7,2025)
+into payroll values(2,2,40000,0,500,39500,7,2025)
+into payroll values(3,3,45000,1000,0,46000,7,2025)
+into payroll values(4,4,38000,0,1000,37000,7,2025)
+into payroll values(5,5,42000,0,0,42000,7,2025)
+into payroll values(6,6,47000,1000,0,48000,7,2025)
+into payroll values(7,7,35000,0,500,34500,7,2025)
+into payroll values(8,8,30000,1000,0,31000,7,2025)
+select * from dual
+select * from payroll
+
+
+--update
+update payroll set bonus=1500,  net_salary=51500 where payroll_id=1;
+select * from payroll
+
+--delete
+delete from payroll where payroll_id= 8;
+select * from payroll
+
+--triggers
+create table backup_payroll(payroll_id int,emp_id int,base_salary decimal(10,2),bonus decimal(10,2),deductions decimal(10,2),
+net_salary decimal(10,2),pay_month int,pay_year int,operation varchar2(10));
+
+--insert
+create or replace trigger trigger_insert
+after insert on payroll
+for each row
+begin
+    insert into backup_payroll values(:new.payroll_id,:new.emp_id,:new.base_salary,:new.bonus,:new.deductions,:new.net_salary,:new.pay_month,:new.pay_year,'INSERT');
+    dbms_output.put_line('(inserted) backup successful..');
+end;
+insert into payroll values(10,8,30000,1000,0,31000,2,2026);
+
+select * from payroll;
+select * from backup_payroll;
+
+
+--update
+create or replace trigger trigger_update
+before update on payroll
+for each row
+begin
+insert into backup_payroll values(:old.payroll_id,:old.emp_id,:old.base_salary,:old.bonus,:old.deductions,:old.net_salary,:old.pay_month,:old.pay_year,'UPDATE');
+dbms_output.put_line('(updated) backup successful..');
+end;
+
+update payroll set base_salary=1000000 where payroll_id=9;
+
+select * from payroll;
+select * from backup_payroll;
+
+
+--delete
+create or replace trigger trigger_delete
+before delete on payroll
+for each row
+begin
+insert into backup_payroll values(:old.payroll_id,:old.emp_id,:old.base_salary,:old.bonus,:old.deductions,:old.net_salary,:old.pay_month,:old.pay_year,'DELETE');
+dbms_output.put_line('(deleted) backup successful..');
+end;
+delete from payroll where payroll_id=1;
+
+select * from payroll;
+select * from backup_payroll;
+
+
+
+-- procedures
+create table manage_payroll (emp_id int primary key, month int, year int, action varchar(30));
+
+-- INSERT
+create or replace procedure insert_p (emp_id in int, month in int, year in int, action in varchar)
+is
+begin
+    insert into manage_payroll values (emp_id, month, year, action);
+    dbms_output.put_line('data inserted..');
+end;
+begin
+    insert_p (10, 6, 2004, 'insert');
+    insert_p (11, 2, 2025, 'insert');
+end;
+
+select * from manage_payroll
+
+
+-- UPDATE
+create or replace procedure update_p (eid in int, eyear in int)
+is
+begin
+    update manage_payroll set year = eyear where emp_id = eid;
+    dbms_output.put_line('data updated..');
+end;
+begin
+    update_p (11, 2000);
+end;
+select * from manage_payroll
+
+-- DELETE
+create or replace procedure delete_p (did in int)
+is
+begin
+    delete from manage_payroll where did = emp_id; 
+    dbms_output.put_line('data deleted..');
+end;
+begin
+    delete_p (11);
+end;
+select * from manage_payroll
+
+
+
+--join
+select e.emp_name, p.base_salary, p.net_salary from employees e inner join payroll p on e.emp_id = p.emp_id;
+
+--subquery
+select * from employees where emp_id in (select emp_id from attendance where present_days > (select avg(present_days) from attendance));
+
+-- group by clause
+select emp_id, sum(deductions) from payroll group by emp_id;
+
